@@ -75,59 +75,29 @@ class BankDataGen:
                     .withColumn("latitude", "float", minValue=24.3963, maxValue=49.3843, random=True)
                     .withColumn("transaction_currency", values=["USD", "EUR", "KWD", "BHD", "GBP", "CHF", "MEX"])
                     .withColumn("transaction_amount", "decimal", minValue=0.01, maxValue=30000, random=True)
-                    .withColumn("transaction_geolocation", StructType([StructField('latitude',StringType()), StructField('longitude', StringType())]),
-                      expr="named_struct('latitude', latitude, 'longitude', longitude)",
-                      baseColumn=['latitude', 'longitude'])
-                    )
-
-        df = fakerDataspec.build()
-
-        df = df.drop(*('latitude', 'longitude'))
-
-        return df
-
-
-    def piiDataGen(self, shuffle_partitions_requested = 10, partitions_requested = 10, data_rows = 10000):
-
-        # setup use of Faker
-        FakerTextUS = FakerTextFactory(locale=['en_US'], providers=[bank])
-
-        # partition parameters etc.
-        self.spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions_requested)
-
-        fakerDataspec = (DataGenerator(self.spark, rows=data_rows, partitions=partitions_requested)
-                    .withColumn("name", percentNulls=0.1, text=FakerTextUS("name") )
-                    .withColumn("address", text=FakerTextUS("address" ))
-                    .withColumn("email", text=FakerTextUS("ascii_company_email") )
-                    .withColumn("aba_routing", text=FakerTextUS("aba" ))
-                    .withColumn("bank_country", text=FakerTextUS("bank_country") )
-                    .withColumn("account_no", text=FakerTextUS("bban" ))
-                    .withColumn("int_account_no", text=FakerTextUS("iban") )
-                    .withColumn("swift11", text=FakerTextUS("swift11" ))
-                    .withColumn("credit_card_number", text=FakerTextUS("credit_card_number") )
                     )
 
         df = fakerDataspec.build()
 
         return df
+
 
 
 import cml.data_v1 as cmldata
 
 # Sample in-code customization of spark configurations
-#from pyspark import SparkContext
-#SparkContext.setSystemProperty('spark.executor.cores', '1')
-#SparkContext.setSystemProperty('spark.executor.memory', '2g')
+from pyspark import SparkContext
+SparkContext.setSystemProperty('spark.executor.cores', '1')
+SparkContext.setSystemProperty('spark.executor.memory', '2g')
 
-CONNECTION_NAME = "se-aw-mdl"
+CONNECTION_NAME = "rags-italia-aw-dl"
 conn = cmldata.get_connection(CONNECTION_NAME)
 spark = conn.get_spark_session()
 
 myDG = BankDataGen(spark)
 
+STORAGE="s3a://rags-italia-buk-c2b5a457/data/"
 transactionsDf = myDG.transactionsDataGen()
-transactionsDf.write.format("json").mode("overwrite").save("s3a://goes-se-sandbox01/datalake/pdefusco/transactions/jsonData2.json")
-
-
-piiDf = myDG.piiDataGen()
-piiDf.write.format("csv").mode("overwrite").save("s3a://goes-se-sandbox01/datalake/pdefusco/pii/piiData.csv")
+transactionsDf = transactionsDf.repartition(1)
+transactionsDf.write.format("csv").mode("overwrite").save(STORAGE+"pdefusco/transactions/trans")
+#transactionsDf.write.format("json").mode("overwrite").save("/home/cdsw/jsonData2.json")
