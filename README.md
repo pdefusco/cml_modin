@@ -7,3 +7,5 @@ Modin uses Ray, Dask or Unidist to provide an effortless way to speed up your pa
 ### References
 
 [Modin Docs](https://modin.readthedocs.io/en/latest/index.html)
+[Modin Paper](https://arxiv.org/pdf/2001.00888)
+[Starting Up a Modin Cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin/using_modin_cluster.html)
